@@ -13,53 +13,6 @@
 #include "core/framework/utils.h"
 #include "core/framework/path_lib.h"
 
-constexpr const char* model_str =
-    "ir_version: 4\n"
-    "graph {\n"
-    "  node {\n"
-    "    input: \"X\"\n"
-    "    input: \"X\"\n"
-    "    output: \"Y\"\n"
-    "    op_type: \"MatMul\"\n"
-    "  }\n"
-    "  name: \"test-model\"\n"
-    "  input {\n"
-    "    name: \"X\"\n"
-    "    type {\n"
-    "      tensor_type {\n"
-    "        elem_type: 1\n"
-    "        shape {\n"
-    "          dim {\n"
-    "            dim_value: 2\n"
-    "          }\n"
-    "          dim {\n"
-    "            dim_value: 2\n"
-    "          }\n"
-    "        }\n"
-    "      }\n"
-    "    }\n"
-    "  }\n"
-    "  output {\n"
-    "    name: \"Y\"\n"
-    "    type {\n"
-    "      tensor_type {\n"
-    "        elem_type: 1\n"
-    "        shape {\n"
-    "          dim {\n"
-    "            dim_value: 2\n"
-    "          }\n"
-    "          dim {\n"
-    "            dim_value: 2\n"
-    "          }\n"
-    "        }\n"
-    "      }\n"
-    "    }\n"
-    "  }\n"
-    "}\n"
-    "opset_import {\n"
-    "  version: 8\n"
-    "}";
-
 namespace onnxruntime {
 namespace {
 void PutAllNodesOnOneProvider(Graph& graph, const std::string& provider_type) {
@@ -79,7 +32,10 @@ TEST(MemcpyTest, copy1) {
   kernel_registry_manager.RegisterKernels(execution_providers);
 
   onnx::ModelProto mp;
-  ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(model_str, &mp));
+  std::ifstream ifs("testdata/matmul_1.pb", std::ifstream::in | std::ifstream::binary);
+  std::string file_content(std::istreambuf_iterator<char>{ifs},
+                           std::istreambuf_iterator<char>{});
+  ASSERT_TRUE(mp.ParseFromString(file_content));
   Model model(mp);
   st = model.MainGraph().Resolve();
   ASSERT_TRUE(st.IsOK()) << st.ErrorMessage();
@@ -94,8 +50,8 @@ TEST(MemcpyTest, copy1) {
   AllocatorPtr allocator =
       execution_providers.Get(onnxruntime::kCpuExecutionProvider)->GetAllocator(0, OrtMemTypeDefault);
   auto* data_type = DataTypeImpl::GetType<float>();
-  std::unique_ptr<Tensor> p_tensor = std::make_unique<Tensor>(data_type, TensorShape({2, 2}), allocator);
-  float data[] = {1.f, 1.f, 0.f, 1.f};
+  std::unique_ptr<Tensor> p_tensor = std::make_unique<Tensor>(data_type, TensorShape({3, 2}), allocator);
+  float data[] = {1.f, 1.f, 0.f, 1.f, 1.f, 1.f};
   memcpy(p_tensor->MutableData<float>(), data, sizeof(data));
   MLValue input =
       MLValue{p_tensor.release(), DataTypeImpl::GetType<Tensor>(), DataTypeImpl::GetType<Tensor>()->GetDeleteFunc()};
