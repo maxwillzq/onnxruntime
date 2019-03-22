@@ -1,6 +1,7 @@
 jobs:
 - job: Ubuntu1604_py_Wheels
-  pool: ubuntu16.04
+  pool:
+    vmImage: 'Ubuntu-16.04'
   strategy:
     matrix:
       Python35:
